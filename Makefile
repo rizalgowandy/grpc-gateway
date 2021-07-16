@@ -81,11 +81,16 @@ $(GENERATE_UNBOUND_METHODS_EXAMPLE_SRCS): $(GENERATE_UNBOUND_METHODS_EXAMPLE_SPE
 	@rm -f $(EXAMPLE_CLIENT_DIR)/generateunboundmethods/README.md \
 		$(EXAMPLE_CLIENT_DIR)/generateunboundmethods/git_push.sh
 
+TMP_INSTALL_DIR := $(shell mktemp -d)
 install:
+	@mkdir -p ${TMP_INSTALL_DIR}
+	cd ${TMP_INSTALL_DIR} && go get \
+		google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1.0 \
+		google.golang.org/protobuf/cmd/protoc-gen-go@v1.26.0 \
+		github.com/bufbuild/buf/cmd/buf@v0.41.0
+	@rmdir ${TMP_INSTALL_DIR}
+
 	go install \
-		google.golang.org/grpc/cmd/protoc-gen-go-grpc \
-		google.golang.org/protobuf/cmd/protoc-gen-go \
-		github.com/bufbuild/buf/cmd/buf \
 		./protoc-gen-openapiv2 \
 		./protoc-gen-grpc-gateway
 
@@ -123,22 +128,6 @@ generate: proto $(ECHO_EXAMPLE_SRCS) $(ABE_EXAMPLE_SRCS) $(UNANNOTATED_ECHO_EXAM
 test: proto
 	go test -short -race ./...
 	go test -race ./examples/internal/integration -args -network=unix -endpoint=test.sock
-
-changelog:
-	docker run --rm \
-		--interactive \
-		--tty \
-		-e "CHANGELOG_GITHUB_TOKEN=${CHANGELOG_GITHUB_TOKEN}" \
-		-v "$(PWD):/usr/local/src/your-app" \
-		ferrarimarco/github-changelog-generator:1.14.3 \
-				-u grpc-ecosystem \
-				-p grpc-gateway \
-				--author \
-				--compare-link \
-				--github-site=https://github.com \
-				--unreleased-label "**Next release**" \
-				--release-branch=master \
-				--future-release=v2.3.0
 
 clean:
 	find . -type f -name '*.pb.go' -delete
